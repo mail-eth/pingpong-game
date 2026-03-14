@@ -1,16 +1,48 @@
+/**
+ * ==========================================
+ * PING PONG GAME - Mobile Responsive
+ * ==========================================
+ * 
+ * A classic ping pong game optimized for mobile devices
+ * with 3 difficulty modes: Normal, Hard, Hardcore
+ * 
+ * Features:
+ * - Touch controls for mobile
+ * - Mouse controls for desktop
+ * - 3 difficulty levels
+ * - Responsive full-screen layout
+ * - Smooth AI opponent
+ * 
+ * Tech Stack:
+ * - HTML5 Canvas
+ * - Vanilla JavaScript
+ * - CSS3 Animations
+ * - No external dependencies
+ * 
+ * Author: Ilham (Mail | MoD)
+ * Version: 1.0.0
+ * License: MIT
+ * 
+ * ==========================================
+ */
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Ping Pong - Ilham's Game</title>
+  <!-- Google Fonts - Press Start 2P for retro gaming look -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-    
+    /* ==========================================
+       CSS RESET & BASE STYLES
+       ========================================== */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      /* Prevent pull-to-refresh on mobile */
       touch-action: none;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -23,20 +55,24 @@
       overflow: hidden;
     }
     
+    /* Background gradient - cyberpunk style */
     body {
       background: #0a0a0a;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: 'Press Start 2P', cursive;
+      font-family: 'Press Start 2P', cursive; /* Retro gaming font */
     }
     
+    /* ==========================================
+       HEADER & SCORE STYLES
+       ========================================== */
     h1 {
       color: #fff;
       font-size: 0.7rem;
       margin-bottom: 3px;
-      text-shadow: 0 0 10px #00ff88;
+      text-shadow: 0 0 10px #00ff88; /* Glow effect */
     }
     
     #score {
@@ -52,9 +88,13 @@
       border-radius: 3px;
     }
     
+    /* Score colors */
     #playerScore { background: #00ff88; color: #000; }
     #aiScore { background: #ff00ff; color: #fff; }
     
+    /* ==========================================
+       MODE BUTTONS STYLES
+       ========================================== */
     #mode {
       display: flex;
       gap: 8px;
@@ -74,9 +114,10 @@
     }
     
     .mode-btn:hover {
-      transform: scale(1.05);
+      transform: scale(1.05); /* Slight grow on hover */
     }
     
+    /* Active mode states with glow */
     .mode-btn.active {
       background: #00ff88;
       color: #000;
@@ -96,6 +137,9 @@
       box-shadow: 0 0 15px rgba(255, 0, 68, 0.5);
     }
     
+    /* ==========================================
+       GAME CANVAS STYLES
+       ========================================== */
     #gameCanvas {
       border: 2px solid #00ff88;
       border-radius: 4px;
@@ -103,6 +147,9 @@
       background: #050505;
     }
     
+    /* ==========================================
+       CONTROLS HINT STYLES
+       ========================================== */
     #controls {
       color: #555;
       font-size: 0.35rem;
@@ -111,24 +158,42 @@
   </style>
 </head>
 <body>
+  <!-- Game Title -->
   <h1>🏓 PING PONG 🏓</h1>
+  
+  <!-- Mode Selection Buttons -->
   <div id="mode">
     <button class="mode-btn active" data-mode="normal">NORMAL</button>
     <button class="mode-btn hard" data-mode="hard">HARD</button>
     <button class="mode-btn hardcore" data-mode="hardcore">HARDCORE</button>
   </div>
+  
+  <!-- Score Display -->
   <div id="score">
     <span>YOU: <span id="player">0</span></span>
     <span>AI: <span id="ai">0</span></span>
   </div>
+  
+  <!-- Main Game Canvas -->
   <canvas id="gameCanvas"></canvas>
+  
+  <!-- Controls Hint -->
   <div id="controls">TAP to START | DRAG to move</div>
 
   <script>
+    // ==========================================
+    // GAME CONFIGURATION
+    // ==========================================
+    
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Speed settings per mode
+    /**
+     * Speed settings for each difficulty mode
+     * - ball: Initial ball speed
+     * - ai: AI tracking speed (higher = harder)
+     * - max: Maximum ball speed cap
+     */
     const SPEED = {
       normal: { ball: 2, ai: 0.06, max: 3.5 },
       hard: { ball: 3.5, ai: 0.10, max: 5 },
@@ -138,14 +203,22 @@
     let currentMode = 'normal';
     let settings = SPEED.normal;
     
-    // Mode buttons
+    // ==========================================
+    // UI EVENT HANDLERS - Mode Selection
+    // ==========================================
+    
+    // Handle mode button clicks
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        // Update active button state
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
+        // Set new mode and settings
         currentMode = btn.dataset.mode;
         settings = SPEED[currentMode];
-        // Reset game
+        
+        // Reset game with new settings
         gameRunning = false;
         playerScore = 0;
         aiScore = 0;
@@ -156,24 +229,37 @@
       });
     });
     
-    // Full screen
+    // ==========================================
+    // CANVAS SIZING - Responsive Full Screen
+    // ==========================================
+    
+    /**
+     * Set canvas size to fill available screen space
+     * Maintains portrait orientation for mobile
+     */
     function setFullScreen() {
       const padding = 15;
       const availableWidth = window.innerWidth - padding;
-      const availableHeight = window.innerHeight - 100;
+      const availableHeight = window.innerHeight - 100; // Account for UI elements
       canvas.width = Math.min(availableWidth, availableHeight * 0.55);
       canvas.height = availableHeight;
     }
     
     setFullScreen();
     
-    // Game constants
+    // ==========================================
+    // GAME CONSTANTS
+    // ==========================================
+    
     const paddleWidth = Math.min(100, canvas.width * 0.35);
     const paddleHeight = 10;
     const ballSize = 10;
     const paddleGap = 3;
     
-    // State
+    // ==========================================
+    // GAME STATE
+    // ==========================================
+    
     let playerX = canvas.width / 2 - paddleWidth / 2;
     let aiX = canvas.width / 2 - paddleWidth / 2;
     let ballX = canvas.width / 2;
@@ -185,11 +271,21 @@
     let aiScore = 0;
     let gameRunning = false;
     
+    // ==========================================
+    // DRAWING FUNCTIONS
+    // ==========================================
+    
+    /**
+     * Draw a rectangle (for paddles)
+     */
     function drawRect(x, y, w, h, color) {
       ctx.fillStyle = color;
       ctx.fillRect(x, y, w, h);
     }
     
+    /**
+     * Draw a circle (for ball)
+     */
     function drawCircle(x, y, r, color) {
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -197,17 +293,27 @@
       ctx.fill();
     }
     
+    /**
+     * Draw the center net line
+     */
     function drawNet() {
       ctx.strokeStyle = '#222';
       ctx.lineWidth = 1;
-      ctx.setLineDash([5, 8]);
+      ctx.setLineDash([5, 8]); // Dashed line pattern
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2);
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.setLineDash([]); // Reset
     }
     
+    // ==========================================
+    // GAME LOGIC
+    // ==========================================
+    
+    /**
+     * Reset ball to center with random direction
+     */
     function resetBall() {
       ballX = canvas.width / 2;
       ballY = canvas.height / 2;
@@ -215,17 +321,24 @@
       ballSpeedY = (Math.random() > 0.5 ? 1 : -1) * settings.ball;
     }
     
+    /**
+     * Clamp value between min and max
+     */
     function clamp(val, min, max) {
       return Math.max(min, Math.min(max, val));
     }
     
+    /**
+     * Main game update loop - handles all game physics
+     */
     function update() {
       if (!gameRunning) return;
       
+      // Move ball
       ballX += ballSpeedX;
       ballY += ballSpeedY;
       
-      // Wall collision
+      // Wall collision (left/right) - bounce back
       if (ballX - ballSize/2 < 0) {
         ballX = ballSize/2;
         ballSpeedX = -ballSpeedX;
@@ -235,7 +348,7 @@
         ballSpeedX = -ballSpeedX;
       }
       
-      // Player paddle collision
+      // Player paddle collision (bottom) - player hits ball back
       let playerPaddleY = canvas.height - paddleHeight - paddleGap;
       if (ballY + ballSize/2 > playerPaddleY && 
           ballY - ballSize/2 < playerPaddleY + paddleHeight &&
@@ -243,14 +356,15 @@
           ballX <= playerX + paddleWidth) {
         
         ballY = playerPaddleY - ballSize/2;
-        ballSpeedY = -Math.abs(ballSpeedY);
+        ballSpeedY = -Math.abs(ballSpeedY); // Bounce up
         
+        // Add spin based on where ball hits paddle
         let hitPos = (ballX - (playerX + paddleWidth/2)) / (paddleWidth/2);
         ballSpeedX += hitPos * 1.2;
         ballSpeedX = clamp(ballSpeedX, -settings.max, settings.max);
       }
       
-      // AI paddle collision
+      // AI paddle collision (top) - AI hits ball back
       let aiPaddleY = paddleGap;
       if (ballY - ballSize/2 < aiPaddleY + paddleHeight && 
           ballY + ballSize/2 > aiPaddleY &&
@@ -258,20 +372,20 @@
           ballX <= aiX + paddleWidth) {
         
         ballY = aiPaddleY + paddleHeight + ballSize/2;
-        ballSpeedY = Math.abs(ballSpeedY);
+        ballSpeedY = Math.abs(ballSpeedY); // Bounce down
         
         let hitPos = (ballX - (aiX + paddleWidth/2)) / (paddleWidth/2);
         ballSpeedX += hitPos * 1;
         ballSpeedX = clamp(ballSpeedX, -settings.max, settings.max);
       }
       
-      // AI movement
+      // AI movement - tracks ball position with smoothing
       let aiTarget = ballX - paddleWidth/2;
       let aiDiff = aiTarget - aiX;
       aiX += aiDiff * settings.ai;
       aiX = clamp(aiX, 0, canvas.width - paddleWidth);
       
-      // Score
+      // Score handling - ball goes past paddle
       if (ballY > canvas.height) {
         aiScore++;
         document.getElementById('ai').textContent = aiScore;
@@ -284,7 +398,11 @@
       }
     }
     
+    /**
+     * Render all game elements to canvas
+     */
     function draw() {
+      // Clear screen
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
@@ -292,18 +410,35 @@
       drawRect(playerX, canvas.height - paddleHeight - paddleGap, paddleWidth, paddleHeight, '#00ff88');
       drawRect(aiX, paddleGap, paddleWidth, paddleHeight, '#ff00ff');
       
+      // Ball with glow effect
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ffffff';
       drawCircle(ballX, ballY, ballSize/2, '#ffffff');
       ctx.shadowBlur = 0;
     }
     
+    // ==========================================
+    // GAME LOOP
+    // ==========================================
+    
+    /**
+     * Main game loop using requestAnimationFrame
+     * Runs at 60fps (screen refresh rate)
+     */
     function gameLoop() {
       update();
       draw();
       requestAnimationFrame(gameLoop);
     }
     
+    // ==========================================
+    // INPUT HANDLING
+    // ==========================================
+    
+    /**
+     * Handle player paddle movement
+     * @param {number} clientX - X coordinate of input
+     */
     function handleMove(clientX) {
       let rect = canvas.getBoundingClientRect();
       let scaleX = canvas.width / rect.width;
@@ -311,6 +446,7 @@
       playerX = clamp(canvasX - paddleWidth/2, 0, canvas.width - paddleWidth);
     }
     
+    // Touch events for mobile
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       handleMove(e.touches[0].clientX);
@@ -322,6 +458,7 @@
       handleMove(e.touches[0].clientX);
     }, { passive: false });
     
+    // Mouse events for desktop
     canvas.addEventListener('mousedown', (e) => {
       handleMove(e.clientX);
       if (!gameRunning) startGame();
@@ -331,6 +468,9 @@
       if (e.buttons === 1) handleMove(e.clientX);
     });
     
+    /**
+     * Start a new game
+     */
     function startGame() {
       gameRunning = true;
       playerScore = 0;
@@ -340,8 +480,10 @@
       resetBall();
     }
     
+    // Handle window resize
     window.addEventListener('resize', setFullScreen);
     
+    // Start the game loop
     gameLoop();
   </script>
 </body>
